@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nook — Personal Workspace</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            background: "#FFFFFF",
+            sidebar: "#FAFAFA",
+            card: "#FFFFFF",
+            mainText: "#171717",
+            subText: "#737373",
+            border: "#E5E5E5",
+            hover: "#F5F5F5",
+            active: "#171717",
+          },
+          boxShadow: {
+            'sm-soft': '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
+            'md-soft': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="[https://fonts.googleapis.com](https://fonts.googleapis.com)">
+  <link rel="preconnect" href="[https://fonts.gstatic.com](https://fonts.gstatic.com)" crossorigin>
+  <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap)" rel="stylesheet">
+
+  <!-- React, ReactDOM & Babel -->
+  <script src="[https://unpkg.com/react@18/umd/react.production.min.js](https://unpkg.com/react@18/umd/react.production.min.js)" crossorigin></script>
+  <script src="[https://unpkg.com/react-dom@18/umd/react-dom.production.min.js](https://unpkg.com/react-dom@18/umd/react-dom.production.min.js)" crossorigin></script>
+  <script src="[https://unpkg.com/@babel/standalone/babel.min.js](https://unpkg.com/@babel/standalone/babel.min.js)"></script>
+
+  <style>
+    body { font-family: 'Inter', 'Noto Sans JP', sans-serif; }
+  </style>
+</head>
+<body class="bg-background text-mainText antialiased selection:bg-hover">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, createContext, useContext } = React;
+
+    // --- Lightweight SVG Icons ---
+    const Icon = ({ children, size = 16, className = "" }) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        {children}
+      </svg>
+    );
+
+    const Icons = {
+      Search: (p) => <Icon {...p}><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></Icon>,
+      Bell: (p) => <Icon {...p}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></Icon>,
+      Settings: (p) => <Icon {...p}><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16z"/><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></Icon>,
+      Home: (p) => <Icon {...p}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></Icon>,
+      Inbox: (p) => <Icon {...p}><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></Icon>,
+      CheckSquare: (p) => <Icon {...p}><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></Icon>,
+      Calendar: (p) => <Icon {...p}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></Icon>,
+      FileText: (p) => <Icon {...p}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></Icon>,
+      Database: (p) => <Icon {...p}><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></Icon>,
+      BookOpen: (p) => <Icon {...p}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></Icon>,
+      BarChart2: (p) => <Icon {...p}><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></Icon>,
+      Plus: (p) => <Icon {...p}><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></Icon>,
+      Menu: (p) => <Icon {...p}><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></Icon>,
+      Play: (p) => <Icon {...p}><polygon points="5 3 19 12 5 21 5 3"/></Icon>,
+      Pause: (p) => <Icon {...p}><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></Icon>,
+      RotateCcw: (p) => <Icon {...p}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></Icon>,
+      Check: (p) => <Icon {...p}><polyline points="20 6 9 17 4 12"/></Icon>,
+      Sliders: (p) => <Icon {...p}><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/></Icon>,
+      X: (p) => <Icon {...p}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></Icon>,
+      Type: (p) => <Icon {...p}><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></Icon>,
+      Heading1: (p) => <Icon {...p}><path d="M4 12h8"/><path d="M4 18V6"/><path d="M12 18V6"/><path d="M17 12l3-2v8"/></Icon>,
+      Heading2: (p) => <Icon {...p}><path d="M4 12h8"/><path d="M4 18V6"/><path d="M12 18V6"/><path d="M21 18h-4c0-4 4-3 4-6 0-1.5-2-2.5-4-1"/></Icon>,
+      Sigma: (p) => <Icon {...p}><path d="M18 7V4H6l6 8-6 8h12v-3"/></Icon>,
+    };
+
+    // --- State Context ---
+    const AppContext = createContext(null);
+
+    const AppProvider = ({ children }) => {
+      const STORAGE_KEY = 'nook_data_store_v2';
+      
+      const defaultState = {
+        tasks: [
+          { id: '1', title: 'Nook UI/UXデザインのブラッシュアップ', completed: true },
+          { id: '2', title: 'ブロックエディタ機能の検証', completed: false },
+        ],
+        widgets: [
+          { id: 'tasks', name: "Today's Tasks", visible: true },
+          { id: 'timer', name: 'Focus Session', visible: true },
+          { id: 'quickNote', name: 'Quick Note', visible: true },
+        ],
+        quickNoteBlocks: [
+          { id: 'b1', type: 'h2', content: 'クイックメモ' },
+          { id: 'b2', type: 'paragraph', content: '行頭で / を入力するとブロックメニューが開きます。' },
+        ],
+      };
+
+      const [data, setData] = useState(() => {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? JSON.parse(saved) : defaultState;
+      });
+
+      const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+      const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+      useEffect(() => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      }, [data]);
+
+      const addTask = (title) => {
+        setData(prev => ({
+          ...prev,
+          tasks: [...prev.tasks, { id: crypto.randomUUID(), title, completed: false }]
+        }));
+      };
+
+      const toggleTask = (id) => {
+        setData(prev => ({
+          ...prev,
+          tasks: prev.tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t)
+        }));
+      };
+
+      const toggleWidgetVisibility = (id) => {
+        setData(prev => ({
+          ...prev,
+          widgets: prev.widgets.map(w => w.id === id ? { ...w, visible: !w.visible } : w)
+        }));
+      };
+
+      const setQuickNoteBlocks = (blocks) => {
+        setData(prev => ({ ...prev, quickNoteBlocks: blocks }));
+      };
+
+      return (
+        <AppContext.Provider ...data, addTask, isSearchOpen, isSidebarOpen, setIsSearchOpen setIsSidebarOpen, setQuickNoteBlocks, toggleTask, toggleWidgetVisibility, value="{{" }}>
+          {children}
+        </AppContext.Provider>
+      );
+    };
+
+    const useApp = () => useContext(AppContext);
+
+    // --- Block Editor Component ---
+    const BlockEditor = ({ blocks, onChange }) => {
+      const [activeMenuIndex, setActiveMenuIndex] = useState(null);
+
+      const updateBlock = (index, content) => {
+        const newBlocks = [...blocks];
+        newBlocks[index].content = content;
+        
+        if (content === '/') {
+          setActiveMenuIndex(index);
+        } else if (activeMenuIndex === index && !content.startsWith('/')) {
+          setActiveMenuIndex(null);
+        }
+        onChange(newBlocks);
+      };
+
+      const changeBlockType = (index, type) => {
+        const newBlocks = [...blocks];
+        newBlocks[index].type = type;
+        newBlocks[index].content = '';
+        setActiveMenuIndex(null);
+        onChange(newBlocks);
+      };
+
+      const addBlock = (index) => {
+        const newBlocks = [...blocks];
+        newBlocks.splice(index + 1, 0, { id: crypto.randomUUID(), type: 'paragraph', content: '' });
+        onChange(newBlocks);
+      };
+
+      return (
+        <div className="space-y-2 py-1">
+          {blocks.map((block, index) => (
+            <div key={block.id} className="relative group flex items-start space-x-2">
+              <div className="flex-1">
+                {block.type === 'h1' && (
+                  <input
+                    type="text"
+                    value={block.content}
+                    onChange={(e) => updateBlock(index, e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addBlock(index)}
+                    placeholder="Heading 1"
+                    className="w-full text-2xl font-bold bg-transparent border-none focus:outline-none placeholder-subText/40"
+                  />
+                )}
+                {block.type === 'h2' && (
+                  <input
+                    type="text"
+                    value={block.content}
+                    onChange={(e) => updateBlock(index, e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addBlock(index)}
+                    placeholder="Heading 2"
+                    className="w-full text-xl font-semibold bg-transparent border-none focus:outline-none placeholder-subText/40"
+                  />
+                )}
+                {block.type === 'paragraph' && (
+                  <input
+                    type="text"
+                    value={block.content}
+                    onChange={(e) => updateBlock(index, e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && addBlock(index)}
+                    placeholder="Type '/' for commands..."
+                    className="w-full text-sm bg-transparent border-none focus:outline-none placeholder-subText/30 text-mainText"
+                  />
+                )}
+                {block.type === 'todo' && (
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={block.completed || false}
+                      onChange={(e) => {
+                        const newBlocks = [...blocks];
+                        newBlocks[index].completed = e.target.checked;
+                        onChange(newBlocks);
+                      }}
+                      className="rounded border-border text-mainText focus:ring-0 cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={block.content}
+                      onChange={(e) => updateBlock(index, e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && addBlock(index)}
+                      className={`w-full text-sm bg-transparent border-none focus:outline-none ${block.completed ? 'line-through text-subText' : ''}`}
+                    />
+                  </div>
+                )}
+                {block.type === 'math' && (
+                  <div className="bg-hover/60 p-2 rounded-md border border-border font-mono text-xs flex items-center">
+                    <span className="text-subText select-none mr-2">$$</span>                     <input                       type="text"                       value={block.content}                       onChange={(e) => updateBlock(index, e.target.value)}                       placeholder="LaTeX Formula"                       className="bg-transparent border-none focus:outline-none w-full text-xs"                     />                     <span className="text-subText select-none ml-2">$$</span>
+                  </div>
+                )}
+              </div>
+
+              {activeMenuIndex === index && (
+                <div className="absolute left-0 top-8 z-50 w-48 bg-background border border-border rounded-lg shadow-md-soft p-1 space-y-0.5">
+                  <div className="text-[10px] font-semibold text-subText px-2 py-1 uppercase tracking-wider">Blocks</div>
+                  <button onClick={() => changeBlockType(index, 'paragraph')} className="w-full flex items-center space-x-2 px-2 py-1.5 text-xs text-mainText hover:bg-hover rounded-md"><Icons.Type size="{14}"/><span>Text</span></button>
+                  <button onClick={() => changeBlockType(index, 'h1')} className="w-full flex items-center space-x-2 px-2 py-1.5 text-xs text-mainText hover:bg-hover rounded-md"><Icons.Heading1 size="{14}"/><span>Heading 1</span></button>
+                  <button onClick={() => changeBlockType(index, 'h2')} className="w-full flex items-center space-x-2 px-2 py-1.5 text-xs text-mainText hover:bg-hover rounded-md"><Icons.Heading2 size="{14}"/><span>Heading 2</span></button>
+                  <button onClick={() => changeBlockType(index, 'todo')} className="w-full flex items-center space-x-2 px-2 py-1.5 text-xs text-mainText hover:bg-hover rounded-md"><Icons.CheckSquare size="{14}"/><span>To-do list</span></button>
+                  <button onClick={() => changeBlockType(index, 'math')} className="w-full flex items-center space-x-2 px-2 py-1.5 text-xs text-mainText hover:bg-hover rounded-md"><Icons.Sigma size="{14}"/><span>Math Block</span></button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    };
+
+    // --- Search Modal Component ---
+    const SearchModal = () => {
+      const { isSearchOpen, setIsSearchOpen, tasks } = useApp();
+      const [query, setQuery] = useState('');
+
+      useEffect(() => {
+        const handleKeyDown = (e) => {
+          if (e.key === 'Escape') setIsSearchOpen(false);
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+      }, []);
+
+      if (!isSearchOpen) return null;
+
+      const filteredTasks = tasks.filter((t) => t.title.toLowerCase().includes(query.toLowerCase()));
+
+      return (
+        <div className="fixed inset-0 z-50 bg-mainText/20 backdrop-blur-sm flex items-start justify-center pt-20">
+          <div className="bg-background border border-border w-full max-w-lg rounded-xl shadow-md-soft overflow-hidden mx-4">
+            <div className="flex items-center px-4 border-b border-border">
+              <Icons.Search className="text-subText mr-2 shrink-0" size="{18}"/>
+              <input
+                type="text"
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search pages, tasks, notes..."
+                className="w-full py-3.5 bg-transparent border-none focus:outline-none text-sm text-mainText placeholder-subText"
+              />
+              <button onClick={() => setIsSearchOpen(false)} className="p-1 hover:bg-hover rounded text-subText">
+                <Icons.X size="{16}"/>
+              </button>
+            </div>
+
+            <div className="max-h-80 overflow-y-auto p-2 space-y-1">
+              {query.trim() === '' ? (
+                <div className="p-4 text-center text-xs text-subText">Type to search across your workspace</div>
+              ) : (
+                <>
+                  <div className="text-[10px] font-semibold text-subText px-2 py-1 uppercase">Tasks</div>
+                  {filteredTasks.length > 0 ? (
+                    filteredTasks.map((task) => (
+                      <div
+                        key={task.id}
+                        onClick={() => setIsSearchOpen(false)}
+                        className="flex items-center space-x-2 px-2 py-2 hover:bg-hover rounded-md text-sm cursor-pointer"
+                      >
+                        <Icons.CheckSquare className="text-subText" size="{14}"/>
+                        <span className="flex-1 text-mainText">{task.title}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="px-2 py-1.5 text-xs text-subText">No matches found</div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // --- Home View ---
+    const Home = () => {
+      const { tasks, addTask, toggleTask, widgets, toggleWidgetVisibility, quickNoteBlocks, setQuickNoteBlocks } = useApp();
+      const [newTaskTitle, setNewTaskTitle] = useState('');
+      const [showWidgetSettings, setShowWidgetSettings] = useState(false);
+      
+      const [timeLeft, setTimeLeft] = useState(25 * 60);
+      const [isActive, setIsActive] = useState(false);
+
+      useEffect(() => {
+        let interval;
+        if (isActive && timeLeft > 0) {
+          interval = setInterval(() => setTimeLeft((t) => t - 1), 1000);
+        } else if (timeLeft === 0) {
+          setIsActive(false);
+        }
+        return () => clearInterval(interval);
+      }, [isActive, timeLeft]);
+
+      const formatTime = (seconds) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+      };
+
+      const handleAddTask = (e) => {
+        if (e.key === 'Enter' && newTaskTitle.trim()) {
+          addTask(newTaskTitle.trim());
+          setNewTaskTitle('');
+        }
+      };
+
+      const isVisible = (id) => widgets.find((w) => w.id === id)?.visible ?? true;
+
+      return (
+        <div className="max-w-4xl mx-auto p-6 md:p-8 space-y-8">
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-3xl font-semibold tracking-tight">Good morning.</h1>
+              <p className="text-subText mt-1 text-sm">October 3, 2026</p>
+            </div>
+            <div className="relative">
+              <button 
+                onClick={() => setShowWidgetSettings(!showWidgetSettings)}
+                className="flex items-center space-x-1.5 text-xs text-subText hover:text-mainText border border-border px-2.5 py-1.5 rounded-md transition-colors"
+              >
+                <Icons.Sliders size="{14}"/>
+                <span>Customize</span>
+              </button>
+              
+              {showWidgetSettings && (
+                <div className="absolute right-0 mt-2 w-48 bg-background border border-border rounded-lg shadow-md-soft p-2 z-20 space-y-1">
+                  <div className="text-[10px] font-semibold text-subText px-2 py-1 uppercase">Widgets</div>
+                  {widgets.map((w) => (
+                    <label key={w.id} className="flex items-center space-x-2 px-2 py-1 text-xs cursor-pointer hover:bg-hover rounded">
+                      <input
+                        type="checkbox"
+                        checked={w.visible}
+                        onChange={() => toggleWidgetVisibility(w.id)}
+                        className="rounded border-border text-mainText focus:ring-0"
+                      />
+                      <span>{w.name}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {isVisible('tasks') && (
+              <div className="border border-border rounded-xl p-5 shadow-sm-soft flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-medium text-sm">Today's Tasks</h2>
+                    <span className="text-xs text-subText">{tasks.filter(t => t.completed).length}/{tasks.length}</span>
+                  </div>
+                  
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {tasks.map((task) => (
+                      <div key={task.id} className="flex items-center space-x-3 group">
+                        <button 
+                          onClick={() => toggleTask(task.id)}
+                          className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                            task.completed ? 'bg-mainText border-mainText' : 'border-subText hover:border-mainText'
+                          }`}
+                        >
+                          {task.completed && <Icons.Check className="text-background" size="{12}"/>}
+                        </button>
+                        <span className={`text-sm ${task.completed ? 'line-through text-subText' : ''}`}>
+                          {task.title}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="mt-4 pt-2 border-t border-border flex items-center space-x-2">
+                  <Icons.Plus className="text-subText" size="{14}"/>
+                  <input 
+                    type="text"
+                    value={newTaskTitle}
+                    onChange={(e) => setNewTaskTitle(e.target.value)}
+                    onKeyDown={handleAddTask}
+                    placeholder="Add task... (Press Enter)"
+                    className="w-full text-xs bg-transparent border-none focus:outline-none placeholder-subText"
+                  />
+                </div>
+              </div>
+            )}
+
+            {isVisible('timer') && (
+              <div className="border border-border rounded-xl p-5 shadow-sm-soft flex flex-col justify-center items-center h-56">
+                <h2 className="text-xs font-medium text-subText mb-2 w-full text-left">Focus Session</h2>
+                <div className="text-5xl font-light tracking-tighter mb-6 font-mono text-mainText">
+                  {formatTime(timeLeft)}
+                </div>
+                <div className="flex space-x-3">
+                  <button 
+                    onClick={() => setIsActive(!isActive)}
+                    className="px-4 py-2 bg-mainText text-background rounded-md text-xs font-medium hover:opacity-90 flex items-center space-x-1.5 transition-opacity"
+                  >
+                    {isActive ? <Icons.Pause size="{14}"/> : <Icons.Play size="{14}"/>}
+                    <span>{isActive ? 'Pause' : 'Start'}</span>
+                  </button>
+                  <button 
+                    onClick={() => { setIsActive(false); setTimeLeft(25 * 60); }}
+                    className="px-3 py-2 border border-border rounded-md text-xs font-medium hover:bg-hover text-subText flex items-center space-x-1.5 transition-colors"
+                  >
+                    <Icons.RotateCcw size="{14}"/>
+                    <span>Reset</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {isVisible('quickNote') && (
+            <div className="border border-border rounded-xl p-5 shadow-sm-soft space-y-2">
+              <BlockEditor blocks="{quickNoteBlocks}" onChange="{setQuickNoteBlocks}"/>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // --- Main App ---
+    const App = () => {
+      const { isSidebarOpen, setIsSidebarOpen, setIsSearchOpen } = useApp();
+
+      useEffect(() => {
+        const handleKeyDown = (e) => {
+          if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+            e.preventDefault();
+            setIsSearchOpen(true);
+          }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+      }, []);
+
+      const NavItem = ({ icon, label, active = false }) => (
+        <button className={`w-full flex items-center space-x-2 px-2 py-1.5 text-xs rounded-md transition-colors ${
+          active ? 'bg-hover text-mainText font-medium' : 'text-subText hover:bg-hover hover:text-mainText'
+        }`}>
+          {icon}
+          <span>{label}</span>
+        </button>
+      );
+
+      return (
+        <div className="flex h-screen bg-background text-mainText font-sans overflow-hidden">
+          <SearchModal/>
+
+          {isSidebarOpen && (
+            <div 
+              className="fixed inset-0 bg-mainText/20 z-30 md:hidden backdrop-blur-sm"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          )}
+
+          <aside 
+            className={`
+              fixed md:relative z-40 h-full bg-sidebar border-r border-border 
+              transition-all duration-300 ease-in-out flex flex-col shrink-0
+              ${isSidebarOpen ? 'w-64 translate-x-0' : '-translate-x-full md:translate-x-0 md:w-0'}
+            `}
+          >
+            <div className="p-4 flex items-center space-x-2 border-b border-border">
+              <div className="w-5 h-5 bg-mainText rounded-sm flex items-center justify-center">
+                <span className="text-background text-[10px] font-bold">N</span>
+              </div>
+              <span className="font-semibold text-sm tracking-wide">Nook</span>
+            </div>
+            
+            <div className="p-2">
+              <button 
+                onClick={() => setIsSearchOpen(true)}
+                className="w-full flex items-center space-x-2 px-2 py-1.5 text-xs text-subText hover:bg-hover rounded-md transition-colors border border-transparent hover:border-border"
+              >
+                <Icons.Search size="{14}"/>
+                <span>Search...</span>
+                <span className="ml-auto text-[10px] border border-border px-1 rounded">⌘K</span>
+              </button>
+            </div>
+
+            <nav className="flex-1 overflow-y-auto px-2 py-1 space-y-0.5">
+              <NavItem icon="{<Icons.Home" size="{16}"/>} label="Home" active />
+              <NavItem icon="{<Icons.Inbox" size="{16}"/>} label="Inbox" />
+              <NavItem icon="{<Icons.CheckSquare" size="{16}"/>} label="Tasks" />
+              <NavItem icon="{<Icons.Calendar" size="{16}"/>} label="Calendar" />
+              <NavItem icon="{<Icons.FileText" size="{16}"/>} label="Notes" />
+              <NavItem icon="{<Icons.Database" size="{16}"/>} label="Databases" />
+              <NavItem icon="{<Icons.BookOpen" size="{16}"/>} label="Study" />
+              <NavItem icon="{<Icons.BarChart2" size="{16}"/>} label="Analytics" />
+              
+              <div className="pt-4 pb-1 px-2 text-[10px] font-semibold text-subText uppercase tracking-wider">Pages</div>
+              <NavItem icon="{<Icons.FileText" size="{16}"/>} label="Project Alpha" />
+              <NavItem icon="{<Icons.FileText" size="{16}"/>} label="Reading List" />
+            </nav>
+
+            <div className="p-2 border-t border-border space-y-0.5">
+              <NavItem icon="{<Icons.Plus" size="{16}"/>} label="New Page" />
+              <NavItem icon="{<Icons.Settings" size="{16}"/>} label="Settings" />
+            </div>
+          </aside>
+
+          <main className="flex-1 flex flex-col min-w-0 h-full">
+            <header className="h-12 border-b border-border flex items-center px-4 justify-between shrink-0 bg-background">
+              <div className="flex items-center space-x-2">
+                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-1 hover:bg-hover rounded-md text-subText">
+                  <Icons.Menu size="{18}"/>
+                </button>
+                <div className="text-xs text-subText flex items-center space-x-1">
+                  <span>Workspace</span>
+                  <span>/</span>
+                  <span className="text-mainText font-medium">Home</span>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3 text-subText">
+                <button className="hover:text-mainText transition-colors p-1"><Icons.Bell size="{16}"/></button>
+                <div className="w-6 h-6 rounded-full bg-hover border border-border flex items-center justify-center text-[10px] font-semibold">U</div>
+              </div>
+            </header>
+
+            <div className="flex-1 overflow-y-auto">
+              <Home/>
+            </div>
+          </main>
+        </div>
+      );
+    };
+
+    const Root = () => (
+      <AppProvider>
+        <App/>
+      </AppProvider>
+    );
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
+  </script>
+</body>
+</html>
